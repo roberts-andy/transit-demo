@@ -1,0 +1,10 @@
+# Example parameter file
+workspace_id: "<set-per-environment>"
+bronze_lakehouse_id: "<set-per-environment>"
+silver_lakehouse_id: "<set-per-environment>"
+warehouse_id: "<set-per-environment>"
+eventhouse_id: "<set-per-environment>"
+api_mode: "live"
+default_cities:
+  - Boston
+  - Washington, DC

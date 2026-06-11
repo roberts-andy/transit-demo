@@ -1,0 +1,36 @@
+version: 1
+sources:
+  - name: mbta
+    city: Boston
+    type: transit_api
+    notes:
+      - Supports routes, stops, trips, predictions, vehicles, shapes, alerts
+    bronze_targets:
+      - bronze_mbta_routes_raw
+      - bronze_mbta_stops_raw
+      - bronze_mbta_predictions_raw
+      - bronze_mbta_vehicles_raw
+  - name: wmata
+    city: Washington, DC
+    type: transit_api
+    notes:
+      - Supports train arrivals, bus predictions, schedules, GTFS/GTFS-RT and vehicle positions
+    bronze_targets:
+      - bronze_wmata_routes_raw
+      - bronze_wmata_stops_raw
+      - bronze_wmata_predictions_raw
+      - bronze_wmata_vehicle_positions_raw
+  - name: open_meteo
+    city_scope:
+      - Boston
+      - Washington, DC
+    type: weather_api
+    bronze_targets:
+      - bronze_weather_hourly_raw
+  - name: ticketmaster
+    city_scope:
+      - Boston
+      - Washington, DC
+    type: public_events_api
+    bronze_targets:
+      - bronze_public_events_raw

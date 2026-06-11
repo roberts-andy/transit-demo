@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Fabric local/export artifacts
+*.ipynb_checkpoints/
+*.html
+*.tmp
+
+# Secrets
+.env
+secrets/
+*.pem
+*.key
+
+# Data outputs
+outputs/
+cache/

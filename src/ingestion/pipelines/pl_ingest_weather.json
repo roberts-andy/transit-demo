@@ -1,0 +1,47 @@
+{
+  "_note": "Design scaffold — author this pipeline in the Fabric UI once CP-2 (workspace setup) is complete.",
+  "_skill": "bronze-ingestion-pattern (Pipeline path — Pattern 5: must land source-faithful output, no field renaming during landing)",
+  "_source_contract": "data_contracts/sources/open-meteo-source-contract.yml",
+  "name": "pl_ingest_weather",
+  "description": "Batch ingestion of hourly weather data from Open-Meteo for Boston and Washington DC. Lands raw JSON to bronze_weather_hourly_raw.",
+  "trigger": "daily",
+  "parameters": {
+    "api_base_url": {"type": "string", "defaultValue": "https://api.open-meteo.com/v1"},
+    "bronze_table": {"type": "string", "defaultValue": "bronze_weather_hourly_raw"},
+    "cities": {
+      "type": "array",
+      "defaultValue": [
+        {"name": "Boston", "lat": 42.3601, "lon": -71.0589},
+        {"name": "Washington_DC", "lat": 38.9072, "lon": -77.0369}
+      ]
+    }
+  },
+  "activities": [
+    {
+      "_activity_type": "ForEach",
+      "name": "ForEach_City",
+      "description": "Iterate over each city and fetch hourly weather",
+      "items": "@pipeline().parameters.cities",
+      "activities": [
+        {
+          "_activity_type": "WebActivity or NotebookActivity",
+          "name": "Fetch_Weather",
+          "description": "Fetch hourly weather from Open-Meteo for one city",
+          "_endpoint_template": "@concat(pipeline().parameters.api_base_url, '/forecast?latitude=', item().lat, '&longitude=', item().lon, '&hourly=temperature_2m,precipitation,precipitation_probability,windspeed_10m,visibility,weathercode&past_days=1&forecast_days=1&timezone=UTC')",
+          "_note": "Open-Meteo returns UTC timestamps natively — no server-side conversion needed"
+        },
+        {
+          "_activity_type": "LakehouseWrite",
+          "name": "Write_To_Bronze",
+          "description": "Write raw JSON response to bronze_weather_hourly_raw",
+          "_target_lakehouse": "lh_transit_bronze",
+          "_target_table": "@pipeline().parameters.bronze_table",
+          "_write_mode": "append",
+          "_bronze_metadata_required": ["source_system", "source_endpoint", "extraction_ts", "city_name", "raw_payload"],
+          "_note": "Pipeline must NOT rename or restructure weather fields — bronze-ingestion-pattern anti-pattern"
+        }
+      ]
+    }
+  ],
+  "_fallback_note": "If pipeline fails during demo, load from src/ingestion/fixtures/bronze/open_meteo_sample.json using load_fixtures.ipynb"
+}

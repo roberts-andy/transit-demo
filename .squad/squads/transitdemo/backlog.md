@@ -14,15 +14,39 @@ description: "Sequenced development backlog for the Fabric Transit Demo, organiz
 
 ---
 
+## Execution Tracking Mode
+
+### Current Sprint / Active Work Set
+
+- Sprint ID: `Sprint-2026-06-11-Bronze-Stabilization`
+- Objective: complete live Bronze execution evidence, finish Key Vault runtime wiring, and harden Bronze orchestration for demo-safe runs.
+- Owner: Lead
+
+### Active Tasks Board
+
+| Task ID | Task | Assigned Agent | Status | Notes |
+|---|---|---|---|---|
+| EX-1 | Run MBTA and WMATA Bronze notebooks in Fabric runtime and capture write-validation evidence (`saveAsTable`, row counts, metadata columns) | Batch Ingestion Engineer | In Progress | 2026-06-11 preflight PASS: MBTA /routes=200 (178), WMATA TrainPositions=200 (106); waiting on Fabric runtime write validation |
+| EX-2 | Finalize Key Vault runtime wiring (`key_vault_uri`, secret-name mapping, access checklist) for Bronze notebooks | DemoOps / QA Engineer | In Progress | Can run in parallel with EX-1 |
+| EX-3 | Harden `pl_orchestrate_bronze.json` with explicit failure branches and schedule trigger settings | Batch Ingestion Engineer | Not Started | Starts after EX-1 evidence checkpoint |
+| EX-4 | Update runbook and execution evidence log for Sprint-2026-06-11-Bronze-Stabilization | Scribe | Not Started | Starts after EX-1 and EX-2 deliverables |
+
+### Sprint Decisions and Assumptions
+
+- Decision: EX-1 is the execution gate for this sprint. EX-3 and EX-4 cannot be marked complete until Fabric runtime evidence exists.
+- Assumption: Fabric workspace identity can read Key Vault secrets after access policy or RBAC assignment.
+
+---
+
 ## Phase 0 — Critical Path (block everything downstream)
 
 These must be resolved before any Fabric implementation work begins.
 
-- [ ] **CP-1** Provision Fabric workspace and confirm capacity (F-SKU or Trial) — `skill: fabric-environment-setup` — **Lead + Arch**
-- [ ] **CP-2** Create four Fabric items: `lh_transit_bronze`, `lh_transit_silver`, `eh_transit_realtime`, `wh_transit_gold` — `skill: fabric-environment-setup` — **Arch**
-- [ ] **CP-3** Connect this repo to Fabric via Git integration; define branch mapping — `skill: fabric-environment-setup` — **DemoOps**
-- [ ] **CP-4** Obtain and vault API keys: MBTA, WMATA, Open-Meteo, Ticketmaster — `skill: public-api-source-contract` (extraction constraints section) — **Batch + Lead**
-- [ ] **CP-5** Populate `infra/parameters.dev.yml` from the example file — `skill: fabric-environment-setup` — **DemoOps**
+- [x] **CP-1** Provision Fabric workspace and confirm capacity (F-SKU or Trial) — `skill: fabric-environment-setup` — **Lead + Arch**
+- [x] **CP-2** Create four Fabric items: `lh_transit_bronze`, `lh_transit_silver`, `eh_transit_realtime`, `wh_transit_gold` — `skill: fabric-environment-setup` — **Arch**
+- [x] **CP-3** Connect this repo to Fabric via Git integration; define branch mapping — `skill: fabric-environment-setup` — **DemoOps**
+- [x] **CP-4** Obtain and vault API keys: MBTA, WMATA, Open-Meteo, Ticketmaster — `skill: public-api-source-contract` (extraction constraints section) — **Batch + Lead**
+- [x] **CP-5** Populate `infra/parameters.dev.yml` from the example file — `skill: fabric-environment-setup` — **DemoOps**
 
 ---
 
@@ -56,13 +80,13 @@ These must be resolved before any Fabric implementation work begins.
 #### F1.4 — API Key Management
 
 - [ ] **T1.4.1** Document key acquisition steps for all four APIs in `docs/runbook.md` — `skill: public-api-source-contract` (extraction constraints) — **DemoOps**
-- [ ] **T1.4.2** Create `.env.template` with all required environment variable names (no values) — **DemoOps**
-- [ ] **T1.4.3** Document how keys are injected into Fabric Notebooks via Key Vault or Notebook parameters — **Batch**
+- [x] **T1.4.2** Create `.env.template` with all required environment variable names (no values) — **DemoOps**
+- [x] **T1.4.3** Document how keys are injected into Fabric Notebooks via Key Vault or Notebook parameters — **Batch**
 - [ ] **T1.4.4** Evaluate Ticketmaster availability; decide fallback public events source — `skill: public-api-source-contract` (demo-specific usefulness) — **Lead**
 
 #### F1.5 — Parameter Files
 
-- [ ] **T1.5.1** Create `infra/parameters.dev.yml` with all workspace and item IDs filled in — `skill: fabric-environment-setup` (Pattern 4) — **DemoOps**
+- [x] **T1.5.1** Create `infra/parameters.dev.yml` with all workspace and item IDs filled in — `skill: fabric-environment-setup` (Pattern 4) — **DemoOps**
 - [ ] **T1.5.2** Add parameter loading utility for workspace, Lakehouse, and Warehouse IDs — `skill: fabric-environment-setup` (Pattern 4) — **Batch**
 
 #### F1.6 — Environment Design Summary (new — required by skill)
@@ -82,15 +106,15 @@ These must be resolved before any Fabric implementation work begins.
 
 #### E-SC — Source Contracts
 
-- [ ] **T-SC-1** Write MBTA source contract — `skill: public-api-source-contract` — **Batch + Transform**
+- [x] **T-SC-1** Write MBTA source contract — `skill: public-api-source-contract` — **Batch + Transform**
   - Entities: routes, stops, trips, predictions, vehicles, alerts
   - Covers: MBTA V3 auth tier, paging, rate limits, source-local vs. UTC timestamps, GTFS-RT considerations for streaming path
   - Feeds: F2.1, F3.1
-- [ ] **T-SC-2** Write WMATA source contract — `skill: public-api-source-contract` — **Batch + Transform**
+- [x] **T-SC-2** Write WMATA source contract — `skill: public-api-source-contract` — **Batch + Transform**
   - Entities: train arrivals, bus predictions, schedules, routes, stops, vehicle positions, alerts
   - Covers: API key requirements, GTFS vs. REST paths, auth risk, schema differences vs. MBTA
   - Feeds: F2.2
-- [ ] **T-SC-3** Write Open-Meteo source contract — `skill: public-api-source-contract` — **Batch**
+- [x] **T-SC-3** Write Open-Meteo source contract — `skill: public-api-source-contract` — **Batch**
   - Entities: hourly weather by city
   - Covers: unauthenticated access confirmation, rate limits, UTC output verification, city parameterization
   - Feeds: F2.3
@@ -116,20 +140,20 @@ These must be resolved before any Fabric implementation work begins.
 
 > Requires: T-SC-1 (MBTA source contract) · `skill: bronze-ingestion-pattern`
 
-- [ ] **T2.1.1** Create `src/ingestion/notebooks/bronze_mbta_routes.ipynb` — pull `/routes`, write to `bronze_mbta_routes_raw` — `skill: bronze-ingestion-pattern` — **Batch**
-- [ ] **T2.1.2** Create `src/ingestion/notebooks/bronze_mbta_stops.ipynb` — pull `/stops` — `skill: bronze-ingestion-pattern` — **Batch**
-- [ ] **T2.1.3** Create `src/ingestion/notebooks/bronze_mbta_predictions.ipynb` — pull `/predictions` with route/stop filters — `skill: bronze-ingestion-pattern` — **Batch**
-- [ ] **T2.1.4** Create `src/ingestion/notebooks/bronze_mbta_vehicles.ipynb` — pull `/vehicles` — `skill: bronze-ingestion-pattern` — **Batch**
-- [ ] **T2.1.5** Add required technical metadata to all MBTA notebooks: `source_system`, `extraction_ts`, `source_endpoint`, `source_record_id`, optional record hash — `skill: bronze-ingestion-pattern` (Pattern 2) — **Batch**
+- [~] **T2.1.1** Create `src/ingestion/notebooks/bronze_mbta_routes.ipynb` — pull `/routes`, write to `bronze_mbta_routes_raw` — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.1.2** Create `src/ingestion/notebooks/bronze_mbta_stops.ipynb` — pull `/stops` — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.1.3** Create `src/ingestion/notebooks/bronze_mbta_predictions.ipynb` — pull `/predictions` with route/stop filters — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.1.4** Create `src/ingestion/notebooks/bronze_mbta_vehicles.ipynb` — pull `/vehicles` — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.1.5** Add required technical metadata to all MBTA notebooks: `source_system`, `extraction_ts`, `source_endpoint`, `source_record_id`, optional record hash — `skill: bronze-ingestion-pattern` (Pattern 2) — **Batch**
 
 #### F2.2 — WMATA Spark Notebook Ingestion
 
 > Requires: T-SC-2 (WMATA source contract) · `skill: bronze-ingestion-pattern`
 
-- [ ] **T2.2.1** Create `src/ingestion/notebooks/bronze_wmata_routes.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
-- [ ] **T2.2.2** Create `src/ingestion/notebooks/bronze_wmata_stops.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
-- [ ] **T2.2.3** Create `src/ingestion/notebooks/bronze_wmata_predictions.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
-- [ ] **T2.2.4** Create `src/ingestion/notebooks/bronze_wmata_vehicle_positions.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.2.1** Create `src/ingestion/notebooks/bronze_wmata_routes.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.2.2** Create `src/ingestion/notebooks/bronze_wmata_stops.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.2.3** Create `src/ingestion/notebooks/bronze_wmata_predictions.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.2.4** Create `src/ingestion/notebooks/bronze_wmata_vehicle_positions.ipynb` — `skill: bronze-ingestion-pattern` — **Batch**
 
 #### F2.3 — Weather via Data Factory Pipeline
 
@@ -137,7 +161,7 @@ These must be resolved before any Fabric implementation work begins.
 >
 > Note: Pipeline path must land source-faithful output. Renaming or restructuring during landing is an anti-pattern per `bronze-ingestion-pattern` Pattern 5.
 
-- [ ] **T2.3.1** Create `src/ingestion/pipelines/pl_ingest_weather.json` — Pipeline calling Open-Meteo hourly endpoint — `skill: bronze-ingestion-pattern` — **Batch**
+- [~] **T2.3.1** Create `src/ingestion/pipelines/pl_ingest_weather.json` — Pipeline calling Open-Meteo hourly endpoint — `skill: bronze-ingestion-pattern` — **Batch**
 - [ ] **T2.3.2** Pipeline writes raw JSON to `bronze_weather_hourly_raw`; no field renaming during landing — `skill: bronze-ingestion-pattern` (Pattern 1, anti-pattern review) — **Batch**
 - [ ] **T2.3.3** Parameterize city list (Boston, Washington DC) via pipeline parameters — `skill: fabric-environment-setup` (Pattern 4) — **Batch**
 
@@ -150,8 +174,8 @@ These must be resolved before any Fabric implementation work begins.
 
 #### F2.5 — Pipeline Orchestration
 
-- [ ] **T2.5.1** Create `src/ingestion/pipelines/pl_orchestrate_bronze.json` — master pipeline triggering all batch ingestion in dependency order — **Batch**
-- [ ] **T2.5.2** Add retry configuration and logging to all pipelines — **Batch**
+- [x] **T2.5.1** Create `src/ingestion/pipelines/pl_orchestrate_bronze.json` — master pipeline triggering all batch ingestion in dependency order — **Batch**
+- [~] **T2.5.2** Add retry configuration and logging to all pipelines — **Batch**
 - [ ] **T2.5.3** Explicitly document replay/fallback status for each pipeline — `skill: bronze-ingestion-pattern` (Pattern 6) — **Batch**
 - [ ] **T2.5.4** Add daily schedule trigger to master pipeline — **DemoOps**
 
@@ -175,12 +199,12 @@ These must be resolved before any Fabric implementation work begins.
 
 > The skill directly mandates capturing whether replay/cached snapshots exist. This is not optional.
 
-- [ ] **T3.2.1** Capture a representative MBTA GTFS-RT snapshot as a static JSON fixture in `src/ingestion/fixtures/mbta_gtfsrt_sample.json` — `skill: bronze-ingestion-pattern` (Pattern 6) — **Stream**
+- [~] **T3.2.1** Capture a representative MBTA GTFS-RT snapshot as a static JSON fixture in `src/ingestion/fixtures/mbta_gtfsrt_sample.json` — `skill: bronze-ingestion-pattern` (Pattern 6) — **Stream**
 - [ ] **T3.2.2** Create `src/ingestion/fixtures/replay_stream.ipynb` — notebook that injects fixture data into the stream path — `skill: bronze-ingestion-pattern` (Pattern 6) — **Stream**
 
 #### F3.3 — Source Inventory Update
 
-- [ ] **T3.3.1** Add `bronze_transit_stream_raw` to `data_contracts/source-inventory.yml` under a new `streaming` source entry — `skill: public-api-source-contract` (entity inventory) — **Scribe**
+- [x] **T3.3.1** Add `bronze_transit_stream_raw` to `data_contracts/source-inventory.yml` under a new `streaming` source entry — `skill: public-api-source-contract` (entity inventory) — **Scribe**
 
 ---
 

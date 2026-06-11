@@ -1,0 +1,229 @@
+---
+source_name: mbta
+city: Boston
+type: transit_api
+version: "1.0"
+created_by: "Batch + Transform"
+status: draft
+backlog_tasks: [T-SC-1]
+
+# ─── OVERVIEW ──────────────────────────────────────────────────────────────────
+overview:
+  purpose: >
+    MBTA is the core-path transit source for the transit demo.
+    It anchors the on-time performance KPI and demonstrates Spark Notebook
+    ingestion against a live public transit API.
+  narrative: >
+    Core-path source. MBTA provides real-time predictions and vehicle positions
+    for Boston subway and bus. The JSON:API response format (with attributes
+    wrapper) is a deliberate design choice that illustrates Silver-layer
+    unwrapping logic. This source requires no API key for open-data tier access,
+    making it the lowest-friction live-API source in the demo.
+  demo_role: core_path
+  kpi_contributions:
+    - on_time_performance
+    - vehicle_position_tracking
+
+# ─── ENTITIES ──────────────────────────────────────────────────────────────────
+entities:
+  - entity_name: routes
+    endpoint: /routes
+    business_meaning: Transit route definitions (subway lines, bus routes)
+    expected_grain: one row per route
+    response_format: JSON:API (attributes wrapper)
+    bronze_target: bronze_mbta_routes_raw
+    silver_target: dim_route
+    notes: >
+      Shared conformed target with WMATA. agency_code = MBTA disambiguates rows
+      from different agencies in the shared Silver entity.
+
+  - entity_name: stops
+    endpoint: /stops
+    business_meaning: Physical stop locations with lat/lng coordinates
+    expected_grain: one row per stop
+    response_format: JSON:API (attributes wrapper)
+    bronze_target: bronze_mbta_stops_raw
+    silver_target: dim_stop
+    notes: latitude and longitude are key geographic fields on the attributes object.
+
+  - entity_name: predictions
+    endpoint: /predictions
+    business_meaning: Real-time arrival and departure predictions per stop and trip
+    expected_grain: one prediction per vehicle-trip-stop combination at extraction time
+    response_format: JSON:API (attributes wrapper)
+    bronze_target: bronze_mbta_predictions_raw
+    silver_target: fact_prediction_snapshot
+    notes: >
+      High-cardinality endpoint. Must filter by route or stop — the API returns
+      an error without a filter parameter. predicted_delay_seconds must be
+      derived in Silver from schedule vs. prediction comparison.
+      Do not compute predicted_delay_seconds in Bronze.
+
+  - entity_name: vehicles
+    endpoint: /vehicles
+    business_meaning: Real-time vehicle positions for active transit vehicles
+    expected_grain: one row per active vehicle per extraction
+    response_format: JSON:API (attributes wrapper)
+    bronze_target: bronze_mbta_vehicles_raw
+    silver_target: fact_vehicle_position
+    notes: >
+      latitude, longitude, bearing, and speed are present on attributes.
+      Suitable for map visualization and on-time proximity analysis.
+
+# ─── KEY FIELDS ────────────────────────────────────────────────────────────────
+key_fields:
+  identifiers:
+    - field: id
+      description: Source record identifier — stable across requests
+      type: string
+      notes: >
+        Present on all JSON:API entities as the top-level "id" field.
+        Use as source_record_id in Bronze. Stable enough to use as a
+        business key in Silver dim entities with agency_code disambiguation.
+
+  timestamps:
+    - field: arrival_time
+      entity: predictions
+      description: Predicted or scheduled arrival time at the stop
+      format: "ISO 8601 with UTC offset (e.g. 2024-01-15T09:32:00-05:00)"
+      semantics: local Boston time with explicit UTC offset
+      utc_conversion_required: true
+      notes: >
+        Silver must convert to UTC for conformed fact_prediction_snapshot.
+        The UTC offset is present in the string — parse with dateutil or
+        Python datetime fromisoformat and convert to UTC.
+
+    - field: departure_time
+      entity: predictions
+      description: Predicted or scheduled departure time at the stop
+      format: "ISO 8601 with UTC offset"
+      semantics: local Boston time with explicit UTC offset
+      utc_conversion_required: true
+      notes: May be null when only arrival is available.
+
+  geographic:
+    - field: latitude
+      entities: [stops, vehicles]
+      type: float
+      notes: Present in attributes on both stop and vehicle entities.
+    - field: longitude
+      entities: [stops, vehicles]
+      type: float
+
+  relationships:
+    - field: "relationships.route.data.id"
+      description: Route foreign key on predictions and vehicles
+      notes: JSON:API relationship — must navigate nested object in Silver.
+    - field: "relationships.stop.data.id"
+      description: Stop foreign key on predictions
+      notes: JSON:API relationship — nested, must be extracted in Silver.
+
+# ─── EXTRACTION CONSIDERATIONS ─────────────────────────────────────────────────
+extraction:
+  auth_required: false
+  auth_notes: >
+    Open-data tier requires no API key (Assumption A3 from backlog).
+    Optional MBTA_API_KEY environment variable is accepted for higher
+    rate limits. Notebooks read it from os.environ and include it as
+    the x-api-key header when present.
+
+  pagination:
+    required: true
+    method: filter-based
+    notes: >
+      /predictions requires filter[route] or filter[stop] query parameter.
+      Without it the API returns HTTP 400 or an empty set.
+      Other endpoints (/routes, /stops, /vehicles) return manageable
+      payloads without paging for demo scope.
+
+  rate_limiting:
+    type: soft
+    notes: >
+      Observe 429 responses and back off. No strict published limit for open tier.
+      MBTA_API_KEY enables higher throughput if needed for production loads.
+
+  refresh_cadence: batch
+  live_demo_reliability: medium
+  reliability_notes: >
+    MBTA V3 API is publicly hosted with moderate uptime. Fixture/cached mode
+    (API_MODE=cached) must be supported for demo resilience. Fixtures stored at
+    fixtures/bronze/mbta_<entity>_sample.json.
+
+  response_format: JSON:API
+  response_notes: >
+    All MBTA entities use JSON:API format. The business fields are nested under
+    an "attributes" object on each item. Relationships are in a separate
+    "relationships" object. Silver is responsible for unwrapping attributes
+    — Bronze stores the full item object as raw_payload.
+
+# ─── BRONZE MAPPING EXPECTATIONS ───────────────────────────────────────────────
+bronze_mapping:
+  storage_approach: raw_payload_with_metadata
+  notes: >
+    Store the full JSON:API item (id + attributes + relationships) as raw_payload.
+    Do NOT unwrap attributes in Bronze. Source fidelity is the only Bronze goal.
+  required_metadata_fields:
+    - source_system: "mbta"
+    - source_endpoint: value from SOURCE_ENDPOINT parameter
+    - source_record_id: item.get("id")
+    - source_record_hash: md5(json.dumps(item, sort_keys=True))
+    - extraction_ts: UTC ISO 8601
+    - ingestion_ts: UTC ISO 8601
+    - raw_payload: json.dumps(item)
+
+# ─── SILVER MAPPING EXPECTATIONS ───────────────────────────────────────────────
+silver_mapping:
+  notes: >
+    All JSON:API attributes must be unwrapped in Silver (item["attributes"][field]).
+    agency_code = MBTA must be added to every Silver entity to enable multi-agency
+    conformed models. Timestamps must be converted from Boston local (with UTC offset)
+    to UTC.
+  targets:
+    - silver_entity: dim_route
+      source_entity: routes
+      agency_code: MBTA
+      conformed_with: wmata
+      key_fields: [id, agency_code]
+      normalization_notes: >
+        Unwrap attributes. Add agency_code = MBTA. Align field names with WMATA
+        conformed schema.
+
+    - silver_entity: dim_stop
+      source_entity: stops
+      agency_code: MBTA
+      key_fields: [id, agency_code]
+      normalization_notes: >
+        Unwrap attributes. Cast latitude and longitude to float. Add agency_code.
+
+    - silver_entity: fact_prediction_snapshot
+      source_entity: predictions
+      agency_code: MBTA
+      key_fields: [id, agency_code, extraction_ts]
+      normalization_notes: >
+        Unwrap attributes. Convert arrival_time and departure_time from Boston
+        local offset to UTC (predicted_arrival_utc, predicted_departure_utc).
+        Derive predicted_delay_seconds from schedule_arrival vs arrival_time
+        comparison. Do NOT compute predicted_delay_seconds in Bronze.
+
+    - silver_entity: fact_vehicle_position
+      source_entity: vehicles
+      agency_code: MBTA
+      key_fields: [id, agency_code, extraction_ts]
+      normalization_notes: >
+        Unwrap attributes. Convert any timestamps to UTC. Extract latitude and
+        longitude as float columns.
+
+# ─── DEMO NARRATIVE ────────────────────────────────────────────────────────────
+demo_narrative:
+  demo_path: core_path
+  story: >
+    MBTA anchors the on-time performance KPI story. It is the first live-API source
+    demonstrated in the Bronze ingestion path. The JSON:API attributes wrapper is
+    a deliberate teaching moment — it makes the Silver unwrapping responsibility
+    visible and tangible for the audience. The cached fixture mode ensures the demo
+    runs reliably even when the MBTA API is slow or unavailable.
+  teaching_moments:
+    - JSON:API attributes wrapper requires Silver-layer unwrapping
+    - predictions endpoint requires route filter — demonstrates API design awareness
+    - predicted_delay_seconds is a Silver derivation, not a Bronze field
+    - fixture fallback pattern for demo resilience

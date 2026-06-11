@@ -1,10 +1,51 @@
 # Example parameter file
 workspace_id: "<set-per-environment>"
+workspace_name: "<set-per-environment>"
+fabric_capacity_name: "<set-per-environment>"
+
 bronze_lakehouse_id: "<set-per-environment>"
+bronze_lakehouse_name: "<set-per-environment>"
+
 silver_lakehouse_id: "<set-per-environment>"
+silver_lakehouse_name: "<set-per-environment>"
+
 warehouse_id: "<set-per-environment>"
+warehouse_name: "<set-per-environment>"
+
 eventhouse_id: "<set-per-environment>"
+eventhouse_name: "<set-per-environment>"
+
+eventstream_id: "<set-per-environment>"
+eventstream_name: "<set-per-environment>"
+
 api_mode: "live"
+
+# Key Vault runtime wiring (no secret values in repo)
+key_vault_uri: "https://<key-vault-name>.vault.azure.net/"
+mbta_api_key_secret_name: "mbta-api-key"
+wmata_api_key_secret_name: "wmata-api-key"
+ticketmaster_api_key_secret_name: "ticketmaster-api-key"
+
+# Source API base URLs
+mbta_api_base: "https://api-v3.mbta.com"
+wmata_api_base: "https://api.wmata.com"
+open_meteo_api_base: "https://api.open-meteo.com/v1"
+ticketmaster_api_base: "https://app.ticketmaster.com/discovery/v2"
+
 default_cities:
-  - Boston
-  - Washington, DC
+  boston:
+    name: "Boston"
+    transit_agency: "mbta"
+    lat: 42.3601
+    lon: -71.0589
+  washington_dc:
+    name: "Washington, DC"
+    transit_agency: "wmata"
+    lat: 38.9072
+    lon: -77.0369
+
+default_route_filter_mbta: "Red"
+default_station_filter_wmata: "All"
+
+fixture_base_path: "src/ingestion/fixtures/bronze"
+stream_fixture_path: "src/ingestion/fixtures/mbta_gtfsrt_sample.json"

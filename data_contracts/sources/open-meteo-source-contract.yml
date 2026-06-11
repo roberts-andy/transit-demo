@@ -1,0 +1,212 @@
+---
+source_name: open_meteo
+city_scope: [Boston, "Washington DC"]
+type: weather_api
+version: "1.0"
+created_by: Batch
+status: draft
+backlog_tasks: [T-SC-3]
+
+# ─── OVERVIEW ──────────────────────────────────────────────────────────────────
+overview:
+  purpose: >
+    Open-Meteo provides hourly weather data for demo cities, enabling weather
+    correlation analysis with transit on-time performance KPIs. It is the
+    optional-enrichment path — not core-path.
+  narrative: >
+    Optional-enrichment source. Hourly weather enriches the on-time performance
+    story with precipitation, wind, and visibility context. The unauthenticated
+    free-tier access and UTC-native timestamps make this the lowest-friction
+    source in the demo — no API key failure risk, no timezone conversion complexity.
+  demo_role: optional_enrichment
+  kpi_contributions:
+    - weather_correlation_with_on_time_performance
+  risk_flags: []
+
+# ─── ENTITIES ──────────────────────────────────────────────────────────────────
+entities:
+  - entity_name: hourly_weather
+    endpoint: /v1/forecast
+    full_url_example: >
+      https://api.open-meteo.com/v1/forecast
+        ?latitude=42.3601&longitude=-71.0589
+        &hourly=temperature_2m,precipitation,precipitation_probability,windspeed_10m,visibility,weathercode
+        &past_days=1&forecast_days=1
+    business_meaning: Hourly weather observations and short-range forecast for a city location
+    expected_grain: one row per city per hour (48 rows per request for past_days=1 + forecast_days=1)
+    response_format: JSON flat parallel arrays indexed by time
+    bronze_target: bronze_weather_hourly_raw
+    silver_target: fact_hourly_weather
+    notes: >
+      API returns parallel arrays for each variable (time[], temperature_2m[], etc.).
+      Silver must transpose arrays into a row-per-hour format.
+      Parameterize by latitude/longitude to cover Boston and Washington DC.
+      Run one request per city per batch.
+
+# ─── QUERY PARAMETERS ──────────────────────────────────────────────────────────
+query_parameters:
+  required:
+    - name: latitude
+      description: City center latitude
+      cities:
+        Boston: 42.3601
+        Washington_DC: 38.9072
+    - name: longitude
+      description: City center longitude
+      cities:
+        Boston: -71.0589
+        Washington_DC: -77.0369
+    - name: hourly
+      value: "temperature_2m,precipitation,precipitation_probability,windspeed_10m,visibility,weathercode"
+      description: Comma-separated list of hourly variables to retrieve
+    - name: past_days
+      value: 1
+      description: Include yesterday's observations for historical join window
+    - name: forecast_days
+      value: 1
+      description: Include today's forecast for current-day analysis
+
+# ─── KEY FIELDS ────────────────────────────────────────────────────────────────
+key_fields:
+  identifiers:
+    - field: "city_name + time"
+      description: >
+        Composite key — no single source record ID. Grain is city + hour.
+        Bronze source_record_id = md5(city_name + extraction_ts).
+
+  timestamps:
+    - field: time
+      entity: hourly_weather
+      description: Hour-level timestamp for the observation or forecast period
+      format: "ISO 8601 UTC without offset (e.g. 2024-01-15T09:00)"
+      semantics: UTC — no local time conversion required
+      utc_conversion_required: false
+      notes: >
+        Open-Meteo returns UTC timestamps natively (Assumption A2 confirmed).
+        No UTC conversion needed in Silver. This is simpler than transit sources
+        and is worth calling out explicitly in the Silver notebook.
+
+  weather_codes:
+    - field: weathercode
+      description: WMO weather interpretation code
+      type: integer
+      notes: >
+        Silver must implement a weathercode → condition_label mapping.
+        Representative WMO code reference:
+          0    = Clear sky
+          1,2,3 = Mainly clear, partly cloudy, overcast
+          45,48 = Fog
+          51-57 = Drizzle (light to dense)
+          61-67 = Rain (slight to heavy)
+          71-77 = Snow fall (slight to heavy)
+          80-82 = Rain showers
+          95    = Thunderstorm
+          96,99 = Thunderstorm with hail
+        Full WMO code list is Silver responsibility — not Bronze.
+
+  weather_variables:
+    - field: temperature_2m
+      description: Air temperature at 2 metres above ground
+      unit: Celsius (default)
+    - field: precipitation
+      description: Total precipitation (rain + showers + snow) in the preceding hour
+      unit: mm
+    - field: precipitation_probability
+      description: Probability of precipitation in the hour
+      unit: percent (0-100)
+    - field: windspeed_10m
+      description: Wind speed at 10 metres above ground
+      unit: km/h (default)
+    - field: visibility
+      description: Visibility distance
+      unit: metres
+    - field: weathercode
+      description: WMO weather interpretation code (see weather_codes section)
+      unit: integer code
+
+# ─── EXTRACTION CONSIDERATIONS ─────────────────────────────────────────────────
+extraction:
+  auth_required: false
+  auth_notes: >
+    Open-Meteo free tier is fully unauthenticated. No API key required.
+    Commercial usage beyond demo thresholds requires a subscription but
+    demo request volume (2 cities, daily batch) is well within free tier limits.
+
+  pagination:
+    required: false
+    notes: >
+      A single request returns the full day range in parallel arrays.
+      No pagination needed for demo scope.
+
+  rate_limiting:
+    type: soft
+    notes: >
+      Free tier has soft rate limits. Daily batch with two city requests
+      is well within free tier limits. No 429 mitigation needed for demo cadence.
+
+  refresh_cadence: daily_batch
+  live_demo_reliability: low_risk
+  reliability_notes: >
+    Low live-demo reliability risk — unauthenticated, no key failure possible.
+    Fixture/cached mode still recommended for fully offline demos.
+    Fixtures: fixtures/bronze/weather_hourly_boston_sample.json,
+              fixtures/bronze/weather_hourly_dc_sample.json
+
+  response_format: JSON flat parallel arrays
+  response_notes: >
+    Response is a JSON object with a "hourly" sub-object containing parallel arrays:
+    {"hourly": {"time": ["2024-01-15T00:00", ...], "temperature_2m": [2.1, ...], ...}}.
+    Bronze stores the full response as raw_payload. Silver explodes arrays into rows.
+
+# ─── BRONZE MAPPING EXPECTATIONS ───────────────────────────────────────────────
+bronze_mapping:
+  storage_approach: raw_payload_with_metadata
+  notes: >
+    Store the full API response JSON as raw_payload. city_name must be added
+    as an extraction parameter since the API does not include it in the response.
+    source_record_id is a hash of city_name + extraction_ts since there is no
+    natural single record ID in the array-format response.
+  required_metadata_fields:
+    - source_system: "open_meteo"
+    - source_endpoint: "/v1/forecast"
+    - city_name: "extraction parameter (Boston or Washington_DC)"
+    - source_record_id: "md5(city_name + extraction_ts)"
+    - source_record_hash: md5(json.dumps(full_response))
+    - extraction_ts: UTC ISO 8601
+    - ingestion_ts: UTC ISO 8601
+    - raw_payload: json.dumps(full_response)
+
+# ─── SILVER MAPPING EXPECTATIONS ───────────────────────────────────────────────
+silver_mapping:
+  notes: >
+    Silver must explode the parallel arrays into one row per hour per city.
+    time field is already UTC — use directly as time_utc.
+    Add city_name and city coordinates as columns.
+    Apply weathercode → condition_label mapping in Silver (not Bronze).
+  targets:
+    - silver_entity: fact_hourly_weather
+      source_entity: hourly_weather
+      key_fields: [city_name, time_utc]
+      normalization_notes: >
+        Parse raw_payload JSON. Navigate to response["hourly"].
+        Zip time[], temperature_2m[], precipitation[], precipitation_probability[],
+        windspeed_10m[], visibility[], weathercode[] arrays into a list of row dicts.
+        time is already UTC ISO 8601 — assign to time_utc directly (no conversion).
+        Map weathercode integer to weather_condition_label using WMO lookup table.
+        Add city_name, latitude, longitude from extraction parameters.
+        Silver is fully responsible for array explosion and weathercode mapping.
+
+# ─── DEMO NARRATIVE ────────────────────────────────────────────────────────────
+demo_narrative:
+  demo_path: optional_enrichment
+  story: >
+    Open-Meteo is the optional enrichment source that adds weather context to the
+    on-time performance KPI. Showing that rain or snow correlates with prediction
+    delays makes the demo more compelling and realistic. The unauthenticated access
+    and UTC-native timestamps make it the simplest source in the stack — a useful
+    contrast to WMATA's complexity.
+  teaching_moments:
+    - UTC-native timestamps confirm A2 — no conversion needed, unlike transit sources
+    - Array-format response requires Silver-layer explosion into rows
+    - weathercode → label mapping is a business concern deferred to Silver
+    - No auth required — contrasts with WMATA and demonstrates risk spectrum

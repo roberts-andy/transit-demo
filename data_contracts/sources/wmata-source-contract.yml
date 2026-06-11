@@ -1,0 +1,245 @@
+---
+source_name: wmata
+city: "Washington DC"
+type: transit_api
+version: "1.0"
+created_by: "Batch + Transform"
+status: draft
+backlog_tasks: [T-SC-2]
+
+# ─── OVERVIEW ──────────────────────────────────────────────────────────────────
+overview:
+  purpose: >
+    WMATA is the second core-path transit source, demonstrating multi-agency
+    conformed modeling. The schema differences vs. MBTA — field naming, timestamp
+    format, and API key requirement — are intentionally part of the demo narrative.
+  narrative: >
+    Core-path source. WMATA covers Washington DC Metro rail and bus. The schema
+    differences vs. MBTA (StationCode vs. stop_id, relative Min vs. absolute
+    arrival_time, required API key) are part of the story: they show why the
+    Silver conformed model matters and what normalization work it performs.
+    High-risk source for live demos due to required API key (Risk R1).
+  demo_role: core_path
+  kpi_contributions:
+    - on_time_performance
+    - vehicle_position_tracking
+  risk_flags:
+    - R1: API key required — credential failure breaks live demo without cached fallback
+
+# ─── ENTITIES ──────────────────────────────────────────────────────────────────
+entities:
+  - entity_name: routes
+    endpoint: /gtfs/routes
+    business_meaning: Route definitions — preferring GTFS static feed for stability
+    expected_grain: one row per route
+    response_format: REST JSON (GTFS static preferred; endpoint is placeholder)
+    bronze_target: bronze_wmata_routes_raw
+    silver_target: dim_route
+    notes: >
+      GTFS static feed (/gtfs/rail-gtfs-static.zip) is more stable for route
+      definitions than the REST API. The Bronze notebook uses /gtfs/routes as a
+      REST placeholder. agency_code = WMATA in Silver conformed entity.
+
+  - entity_name: stops
+    endpoint: /gtfs/stops
+    business_meaning: Stop and station definitions from GTFS static feed
+    expected_grain: one row per stop or station
+    response_format: REST JSON or GTFS static
+    bronze_target: bronze_wmata_stops_raw
+    silver_target: dim_stop
+    notes: >
+      WMATA uses StationCode for rail stations — different naming from MBTA stop_id.
+      GTFS feed uses standard stop_id. Silver must normalize to shared stop key
+      with agency_code = WMATA.
+
+  - entity_name: predictions
+    endpoint: /StationPrediction.svc/json/GetPrediction/All
+    business_meaning: Real-time rail arrival predictions for all stations
+    expected_grain: one prediction per train-station arrival at extraction time
+    response_format: REST JSON
+    bronze_target: bronze_wmata_predictions_raw
+    silver_target: fact_prediction_snapshot
+    notes: >
+      Returns {"Trains": [...]} — Bronze must extract from "Trains" array.
+      The Min field is integer minutes until arrival (relative time from extraction),
+      NOT an absolute timestamp like MBTA arrival_time. Silver must compute
+      predicted_arrival_utc = extraction_ts + Min minutes. This is a significant
+      schema difference vs. MBTA that Silver resolves into the conformed model.
+      Bus predictions use a different endpoint (/NextBusService) — rail prioritized.
+
+  - entity_name: vehicle_positions
+    endpoint: /gtfs-rt/vehiclepositions
+    business_meaning: Real-time vehicle positions for active transit vehicles
+    expected_grain: one row per active vehicle per extraction
+    response_format: GTFS-RT protobuf binary (REST JSON alternative available)
+    bronze_target: bronze_wmata_vehicle_positions_raw
+    silver_target: fact_vehicle_position
+    notes: >
+      GTFS-RT returns protobuf binary which requires a custom parser
+      (google.transit.gtfs_realtime_pb2). For demo purposes, the REST alternative
+      /Bus.svc/json/jBusPositions returns JSON vehicle positions and is preferred.
+      Bronze notebook documents this tradeoff.
+
+# ─── KEY FIELDS ────────────────────────────────────────────────────────────────
+key_fields:
+  identifiers:
+    - field: StationCode
+      entity: predictions
+      description: WMATA station identifier for rail — differs from MBTA stop_id naming
+      type: string
+      notes: >
+        Silver must map StationCode to the shared stop key with agency_code = WMATA.
+        Named differently from MBTA id — this naming difference is part of the demo story.
+
+    - field: stop_id
+      entity: "stops (GTFS)"
+      description: Standard GTFS stop identifier
+      type: string
+
+    - field: "RouteID / route_id"
+      entities: [routes, predictions]
+      description: Route identifier — field name varies by REST vs. GTFS endpoint
+      type: string
+      notes: Naming differs from MBTA convention. Silver must normalize to shared route key.
+
+    - field: VehicleID
+      entity: vehicle_positions
+      description: Unique vehicle identifier
+      type: string
+
+  timestamps:
+    - field: Min
+      entity: predictions
+      description: Minutes until predicted arrival (integer, relative)
+      format: integer minutes from extraction time
+      semantics: relative time — must be converted to absolute UTC arrival time
+      utc_conversion_required: true
+      notes: >
+        WMATA REST predictions use relative Min field, NOT absolute ISO 8601 timestamp.
+        Silver computes: predicted_arrival_utc = extraction_ts + timedelta(minutes=int(Min)).
+        This is a fundamental schema difference vs. MBTA arrival_time.
+
+    - field: general_timestamps
+      entity: all
+      format: WMATA local time (US/Eastern, may lack explicit offset)
+      semantics: local Eastern time without always-present UTC offset
+      utc_conversion_required: true
+      notes: >
+        WMATA timestamps are in US/Eastern local time. Silver must apply
+        Eastern → UTC conversion using pytz or zoneinfo.
+
+  geographic:
+    - field: "Lat / Lon"
+      entities: [vehicle_positions]
+      type: float
+      notes: Vehicle position coordinates from REST or GTFS-RT feed.
+
+# ─── EXTRACTION CONSIDERATIONS ─────────────────────────────────────────────────
+extraction:
+  auth_required: true
+  auth_notes: >
+    WMATA REST API requires api_key header (Risk R1 from backlog).
+    Key must be present in WMATA_API_KEY environment variable, injected via
+    Fabric Key Vault or Notebook parameter. Header name is "api_key" (not
+    Authorization, not x-api-key). Notebooks must raise ValueError if
+    WMATA_API_KEY is missing when API_MODE = "live".
+
+  pagination:
+    required: false
+    notes: >
+      /StationPrediction/All returns all stations in one call.
+      GTFS static feeds are single bulk downloads.
+
+  rate_limiting:
+    type: soft
+    notes: >
+      WMATA developer tier has per-minute and per-day rate limits.
+      Observe 429 responses and back off. Demo batch cadence is well within limits.
+
+  refresh_cadence: batch
+  live_demo_reliability: high_risk
+  reliability_notes: >
+    High-risk source for live demos. API key required means credential failure
+    can break a demo run without warning. API_MODE=cached is strongly recommended
+    for demo rehearsal. Auth failure and schema differences vs. MBTA are
+    explicit parts of the demo teaching narrative.
+
+  response_format: varies_by_entity
+  response_notes: >
+    REST endpoints return JSON. GTFS static is CSV/zip. GTFS-RT is protobuf binary.
+    Demo uses REST JSON where available. Schema field naming differs significantly
+    from MBTA — this difference is intentional in the demo story.
+
+# ─── BRONZE MAPPING EXPECTATIONS ───────────────────────────────────────────────
+bronze_mapping:
+  storage_approach: raw_payload_with_metadata
+  notes: >
+    Store full REST JSON response item as raw_payload. Do not normalize
+    WMATA-specific field names (StationCode, Min, RouteID) in Bronze.
+    The schema difference vs. MBTA is intentionally visible in Bronze
+    and resolved in Silver — this asymmetry is part of the demo story.
+  required_metadata_fields:
+    - source_system: "wmata"
+    - source_endpoint: value from SOURCE_ENDPOINT parameter
+    - source_record_id: "item.get('RouteID') or item.get('StationCode') or item.get('VehicleID') or item.get('id')"
+    - source_record_hash: md5(json.dumps(item, sort_keys=True))
+    - extraction_ts: UTC ISO 8601
+    - ingestion_ts: UTC ISO 8601
+    - raw_payload: json.dumps(item)
+
+# ─── SILVER MAPPING EXPECTATIONS ───────────────────────────────────────────────
+silver_mapping:
+  notes: >
+    Silver normalizes WMATA-native naming (StationCode, Min, RouteID) into
+    conformed shared entities. agency_code = WMATA added to all Silver outputs.
+    Shared conformed targets with MBTA demonstrate the multi-agency model.
+  targets:
+    - silver_entity: dim_route
+      source_entity: routes
+      agency_code: WMATA
+      conformed_with: mbta
+      key_fields: [route_id, agency_code]
+      normalization_notes: >
+        Normalize RouteID or route_id field name to shared route_id key.
+        Add agency_code = WMATA.
+
+    - silver_entity: dim_stop
+      source_entity: stops
+      agency_code: WMATA
+      key_fields: [stop_id, agency_code]
+      normalization_notes: >
+        Normalize StationCode (rail) and stop_id (bus/GTFS) to shared stop_id key.
+        Add agency_code = WMATA. Map lat/lng to standard geographic columns.
+
+    - silver_entity: fact_prediction_snapshot
+      source_entity: predictions
+      agency_code: WMATA
+      key_fields: [StationCode, VehicleId, extraction_ts, agency_code]
+      normalization_notes: >
+        Compute predicted_arrival_utc = extraction_ts + timedelta(minutes=int(Min)).
+        This approach differs fundamentally from MBTA absolute timestamp parsing.
+        Normalize StationCode to shared stop_id with agency_code = WMATA.
+        Do NOT compute derived delay logic in Bronze.
+
+    - silver_entity: fact_vehicle_position
+      source_entity: vehicle_positions
+      agency_code: WMATA
+      key_fields: [VehicleID, extraction_ts, agency_code]
+      normalization_notes: >
+        Normalize Lat/Lon field names to standard latitude/longitude.
+        Convert any timestamps to UTC. Add agency_code = WMATA.
+
+# ─── DEMO NARRATIVE ────────────────────────────────────────────────────────────
+demo_narrative:
+  demo_path: core_path
+  story: >
+    WMATA demonstrates why a conformed Silver model is necessary. The schema
+    differences vs. MBTA — StationCode vs. stop_id, relative Min vs. absolute
+    arrival_time, required API key — make the Silver normalization work tangible
+    and visible to the audience. Both agencies produce the same conformed Silver
+    entities, proving the multi-agency model works.
+  teaching_moments:
+    - WMATA requires API key — demonstrates credential risk management
+    - Min field (relative) vs. MBTA arrival_time (absolute) — Silver resolves the difference
+    - StationCode naming vs. MBTA stop_id — conformed key mapping in Silver
+    - Same Bronze pattern, different schema — Silver provides the abstraction layer

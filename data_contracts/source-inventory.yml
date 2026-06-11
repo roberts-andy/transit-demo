@@ -34,3 +34,14 @@ sources:
     type: public_events_api
     bronze_targets:
       - bronze_public_events_raw
+  - name: mbta_gtfsrt_stream
+    city: Boston
+    type: streaming_gtfsrt
+    notes:
+      - MBTA GTFS-RT vehicle positions via Eventstream
+      - Real-time feed — requires persistent connection or replay from fixture
+      - Fixture at src/ingestion/fixtures/mbta_gtfsrt_sample.json for fallback/replay
+    bronze_targets:
+      - bronze_transit_stream_raw
+    ingestion_method: eventstream
+    eventhouse_target: eh_transit_realtime

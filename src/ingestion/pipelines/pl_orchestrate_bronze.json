@@ -1,0 +1,233 @@
+{
+  "_note": "Design scaffold for Fabric Data Factory orchestration of Bronze notebook ingestion.",
+  "_skill": "bronze-ingestion-pattern (orchestration with dependency-safe ordering, retries, and minimal run logging)",
+  "name": "pl_orchestrate_bronze",
+  "description": "Master Bronze ingestion orchestrator for MBTA and WMATA notebook sources.",
+  "trigger": "manual_or_schedule",
+  "parameters": {
+    "workspace_id": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "api_mode": {
+      "type": "string",
+      "defaultValue": "live"
+    },
+    "key_vault_uri": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "mbta_secret_name": {
+      "type": "string",
+      "defaultValue": "mbta-api-key"
+    },
+    "wmata_secret_name": {
+      "type": "string",
+      "defaultValue": "wmata-api-key"
+    }
+  },
+  "variables": {
+    "run_log": {
+      "type": "Array",
+      "defaultValue": []
+    }
+  },
+  "activities": [
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Start",
+      "variableName": "run_log",
+      "value": "@concat('START runId=', pipeline().RunId, ' ts=', utcNow())"
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_MBTA_Routes",
+      "notebookPath": "src/ingestion/notebooks/bronze_mbta_routes.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
+      }
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_MBTA_Stops",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Routes",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "notebookPath": "src/ingestion/notebooks/bronze_mbta_stops.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
+      }
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_MBTA_Predictions",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Stops",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "notebookPath": "src/ingestion/notebooks/bronze_mbta_predictions.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
+      }
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_MBTA_Vehicles",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Predictions",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "notebookPath": "src/ingestion/notebooks/bronze_mbta_vehicles.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
+      }
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_WMATA_Routes",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Vehicles",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "notebookPath": "src/ingestion/notebooks/bronze_wmata_routes.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
+      }
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_WMATA_Stops",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_Routes",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "notebookPath": "src/ingestion/notebooks/bronze_wmata_stops.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
+      }
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_WMATA_Predictions",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_Stops",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "notebookPath": "src/ingestion/notebooks/bronze_wmata_predictions.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
+      }
+    },
+    {
+      "_activity_type": "NotebookActivity",
+      "name": "NB_WMATA_VehiclePositions",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_Predictions",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "notebookPath": "src/ingestion/notebooks/bronze_wmata_vehicle_positions.ipynb",
+      "policy": {
+        "retry": 2,
+        "retryIntervalInSeconds": 30,
+        "timeout": "00:10:00"
+      },
+      "baseParameters": {
+        "API_MODE": "@pipeline().parameters.api_mode",
+        "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
+      }
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Success",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_VehiclePositions",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "variableName": "run_log",
+      "value": "@concat('SUCCESS runId=', pipeline().RunId, ' ts=', utcNow())"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+---
+# Transit Demo — Development Environment Parameters
+# Populate workspace/item IDs from your Fabric workspace after CP-1 and CP-2 complete.
+# skill: fabric-environment-setup (Pattern 4)
+
+workspace_id: "1771407e-fabc-4774-83fd-572e6347792c"
+workspace_name: "TransitDemo"
+fabric_capacity_name: "andyfabcentral"
+
+# Lakehouse IDs — set after CP-2
+bronze_lakehouse_id: "652074ad-c45e-4245-9eba-ae470adeb4cb"
+bronze_lakehouse_name: "lh_transit_bronze"
+
+silver_lakehouse_id: "bd6c7417-3f8f-4b49-b9eb-498cb09b46a9"
+silver_lakehouse_name: "lh_transit_silver"
+
+# Warehouse — set after CP-2
+warehouse_id: "26d157ff-e24c-4503-bced-76760f91090d"
+warehouse_name: "wh_transit_gold"
+
+# Eventhouse — set after CP-2
+eventhouse_id: "daf2482a-15f1-4c5b-b0e9-f3a59d219777"
+eventhouse_name: "eh_transit_realtime"
+
+eventstream_id: "29e74f19-93d9-486b-9adc-b3ad9c752c5d"
+eventstream_name: "es_transit_realtime"
+
+# API mode: "live" | "cached"
+# Use "cached" until live API keys are confirmed (CP-4)
+api_mode: "live"
+
+# Key Vault runtime wiring (no secret values in repo)
+key_vault_uri: ""
+mbta_api_key_secret_name: "mbta-api-key"
+wmata_api_key_secret_name: "wmata-api-key"
+ticketmaster_api_key_secret_name: "ticketmaster-api-key"
+
+# Source API base URLs
+mbta_api_base: "https://api-v3.mbta.com"
+wmata_api_base: "https://api.wmata.com"
+open_meteo_api_base: "https://api.open-meteo.com/v1"
+ticketmaster_api_base: "https://app.ticketmaster.com/discovery/v2"
+
+# Cities in scope
+default_cities:
+  boston:
+    name: "Boston"
+    transit_agency: "mbta"
+    lat: 42.3601
+    lon: -71.0589
+  washington_dc:
+    name: "Washington, DC"
+    transit_agency: "wmata"
+    lat: 38.9072
+    lon: -77.0369
+
+# Demo defaults
+default_route_filter_mbta: "Red"  # For predictions sampling during demo
+default_station_filter_wmata: "All"  # For WMATA predictions
+
+# Replay / fallback
+fixture_base_path: "src/ingestion/fixtures/bronze"
+stream_fixture_path: "src/ingestion/fixtures/mbta_gtfsrt_sample.json"

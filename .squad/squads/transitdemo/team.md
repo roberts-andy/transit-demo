@@ -9,12 +9,15 @@ Design and implement a reusable Microsoft Fabric demo that proves multiple inges
 - Demo narrative is understandable to both technical and executive audiences
 - Repo is reusable by other field teams
 
-## Squad members
-- Lead — owns scope, priorities, and final technical decisions
-- Solution Architect — owns target architecture and workload mapping
-- Batch Ingestion Engineer — owns notebook + pipeline ingestion patterns
-- Streaming Engineer — owns Eventstream/Eventhouse pattern
-- Transformation Engineer — owns Dataflow Gen2 + normalization patterns
-- SQL / Warehouse Engineer — owns MLV + Warehouse gold model
-- DemoOps / QA Engineer — owns validation, CI/CD readiness, and demo script hardening
-- Scribe — owns decisions, backlog hygiene, and documentation quality
+## Members
+
+| Name | Role | Status |
+|---|---|---|
+| Lead | owns scope, priorities, and final technical decisions | Active |
+| Solution Architect | owns target architecture and workload mapping | Active |
+| Batch Ingestion Engineer | owns notebook and pipeline ingestion patterns | Active |
+| Streaming Engineer | owns Eventstream and Eventhouse pattern | Active |
+| Transformation Engineer | owns Dataflow Gen2 and normalization patterns | Active |
+| SQL / Warehouse Engineer | owns MLV and Warehouse gold model | Active |
+| DemoOps / QA Engineer | owns validation, CI/CD readiness, and demo script hardening | Active |
+| Scribe | owns decisions, backlog hygiene, and documentation quality | Active |

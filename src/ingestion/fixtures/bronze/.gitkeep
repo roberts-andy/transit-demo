@@ -1,0 +1,3 @@
+# This file ensures git tracks the bronze fixtures directory.
+# Actual fixture snapshots are populated after CP-4 (live API keys).
+# See README.md in this directory for the full file manifest.

@@ -1,0 +1,36 @@
+{
+  "_note": "PLACEHOLDER — replace with real GTFS-RT snapshot captured from MBTA feed. See backlog T3.2.1.",
+  "_skill": "bronze-ingestion-pattern (Pattern 6 — replay/fallback for streaming path)",
+  "_source": "MBTA GTFS-RT vehicle positions feed",
+  "_capture_command": "curl -H 'x-api-key: $MBTA_API_KEY' https://api-v3.mbta.com/vehicles?format=json > mbta_gtfsrt_sample.json",
+  "header": {
+    "gtfs_realtime_version": "2.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": 0
+  },
+  "entity": [
+    {
+      "_note": "Sample MBTA vehicle position entity — replace with real data",
+      "id": "y1914",
+      "vehicle": {
+        "trip": {
+          "trip_id": "PLACEHOLDER_TRIP_ID",
+          "route_id": "Red",
+          "direction_id": 0
+        },
+        "position": {
+          "latitude": 42.3601,
+          "longitude": -71.0589,
+          "bearing": 180.0
+        },
+        "current_stop_sequence": 1,
+        "current_status": "IN_TRANSIT_TO",
+        "timestamp": 0,
+        "vehicle": {
+          "id": "y1914",
+          "label": "1914"
+        }
+      }
+    }
+  ]
+}

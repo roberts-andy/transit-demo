@@ -10,9 +10,13 @@ __pycache__/
 
 # Secrets
 .env
+.env.local
 secrets/
 *.pem
 *.key
+
+# Local parameter overrides (never commit env-specific IDs or key overrides)
+infra/parameters.local.yml
 
 # Data outputs
 outputs/

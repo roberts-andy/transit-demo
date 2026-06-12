@@ -4,6 +4,17 @@
   "name": "pl_orchestrate_bronze",
   "description": "Master Bronze ingestion orchestrator for MBTA and WMATA notebook sources.",
   "trigger": "manual_or_schedule",
+  "trigger_placeholder": {
+    "_note": "TODO-DEPLOYMENT: wire this schedule trigger in deployment/runtime config; disabled by default.",
+    "type": "Schedule",
+    "enabled": false,
+    "recurrence": {
+      "frequency": "Day",
+      "interval": 1,
+      "startTimeUtc": "2026-06-12T05:00:00Z",
+      "timeZone": "UTC"
+    }
+  },
   "parameters": {
     "workspace_id": {
       "type": "string",
@@ -16,6 +27,10 @@
     "key_vault_uri": {
       "type": "string",
       "defaultValue": ""
+    },
+    "key_vault_connection_name": {
+      "type": "string",
+      "defaultValue": "transit-vault"
     },
     "mbta_secret_name": {
       "type": "string",
@@ -30,12 +45,21 @@
     "run_log": {
       "type": "Array",
       "defaultValue": []
+    },
+    "last_failed_activity": {
+      "type": "String",
+      "defaultValue": ""
     }
   },
   "activities": [
     {
       "_activity_type": "AppendVariable",
       "name": "Log_Start",
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
       "variableName": "run_log",
       "value": "@concat('START runId=', pipeline().RunId, ' ts=', utcNow())"
     },
@@ -51,8 +75,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_MBTA_Routes",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Routes",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_MBTA_Routes"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_MBTA_Routes",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_MBTA_Routes",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "NotebookActivity",
@@ -74,8 +137,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_MBTA_Stops",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Stops",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_MBTA_Stops"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_MBTA_Stops",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_MBTA_Stops",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "NotebookActivity",
@@ -97,8 +199,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_MBTA_Predictions",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Predictions",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_MBTA_Predictions"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_MBTA_Predictions",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_MBTA_Predictions",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "NotebookActivity",
@@ -120,8 +261,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "MBTA_API_KEY_SECRET_NAME": "@pipeline().parameters.mbta_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_MBTA_Vehicles",
+      "dependsOn": [
+        {
+          "activity": "NB_MBTA_Vehicles",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_MBTA_Vehicles"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_MBTA_Vehicles",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_MBTA_Vehicles",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "NotebookActivity",
@@ -143,8 +323,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_WMATA_Routes",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_Routes",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_WMATA_Routes"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_WMATA_Routes",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_WMATA_Routes",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "NotebookActivity",
@@ -166,8 +385,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_WMATA_Stops",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_Stops",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_WMATA_Stops"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_WMATA_Stops",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_WMATA_Stops",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "NotebookActivity",
@@ -189,8 +447,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_WMATA_Predictions",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_Predictions",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_WMATA_Predictions"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_WMATA_Predictions",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_WMATA_Predictions",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "NotebookActivity",
@@ -212,8 +509,47 @@
       "baseParameters": {
         "API_MODE": "@pipeline().parameters.api_mode",
         "AZURE_KEY_VAULT_URI": "@pipeline().parameters.key_vault_uri",
+        "KEY_VAULT_CONNECTION_NAME": "@pipeline().parameters.key_vault_connection_name",
         "WMATA_API_KEY_SECRET_NAME": "@pipeline().parameters.wmata_secret_name"
       }
+    },
+    {
+      "_activity_type": "SetVariable",
+      "name": "Set_Failed_NB_WMATA_VehiclePositions",
+      "dependsOn": [
+        {
+          "activity": "NB_WMATA_VehiclePositions",
+          "dependencyConditions": [
+            "Failed"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "last_failed_activity",
+      "value": "NB_WMATA_VehiclePositions"
+    },
+    {
+      "_activity_type": "AppendVariable",
+      "name": "Log_Failed_NB_WMATA_VehiclePositions",
+      "dependsOn": [
+        {
+          "activity": "Set_Failed_NB_WMATA_VehiclePositions",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
+      "variableName": "run_log",
+      "value": "@concat('FAILED activity=', variables('last_failed_activity'), ' runId=', pipeline().RunId, ' ts=', utcNow())"
     },
     {
       "_activity_type": "AppendVariable",
@@ -226,6 +562,11 @@
           ]
         }
       ],
+      "policy": {
+        "retry": 1,
+        "retryIntervalInSeconds": 10,
+        "timeout": "00:02:00"
+      },
       "variableName": "run_log",
       "value": "@concat('SUCCESS runId=', pipeline().RunId, ' ts=', utcNow())"
     }

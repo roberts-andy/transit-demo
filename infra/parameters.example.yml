@@ -21,7 +21,10 @@ eventstream_name: "<set-per-environment>"
 api_mode: "live"
 
 # Key Vault runtime wiring (no secret values in repo)
+# Expected format: https://<key-vault-name>.vault.azure.net/
 key_vault_uri: "https://<key-vault-name>.vault.azure.net/"
+key_vault_connection_name: "transit-vault"
+# Expected format: lowercase kebab-case secret names stored in Key Vault.
 mbta_api_key_secret_name: "mbta-api-key"
 wmata_api_key_secret_name: "wmata-api-key"
 ticketmaster_api_key_secret_name: "ticketmaster-api-key"

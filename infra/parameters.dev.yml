@@ -30,7 +30,8 @@ eventstream_name: "es_transit_realtime"
 api_mode: "live"
 
 # Key Vault runtime wiring (no secret values in repo)
-key_vault_uri: ""
+key_vault_uri: "https://kvtransitdemo-f70cfb6a.vault.azure.net/"
+key_vault_connection_name: "transit-vault"
 mbta_api_key_secret_name: "mbta-api-key"
 wmata_api_key_secret_name: "wmata-api-key"
 ticketmaster_api_key_secret_name: "ticketmaster-api-key"

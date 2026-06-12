@@ -54,16 +54,16 @@ from pyspark.sql import SparkSession
 
 spark = SparkSession.getActiveSession()
 
-KEY_VAULT_URI = os.environ.get("AZURE_KEY_VAULT_URI", "https://kvtransitdemo-f70cfb6a.vault.azure.net/")
+KEY_VAULT_CONNECTION = "transit-vault"  # Fabric connection name
 
 def resolve_secret(secret_env_name: str, secret_name: str) -> str:
-    """Resolve secret: env var > Key Vault URI."""
+    """Resolve secret: env var > Fabric Key Vault connection."""
     value = os.environ.get(secret_env_name, "")
     if value:
         return value
     try:
         from notebookutils import mssparkutils
-        return mssparkutils.credentials.getSecret(KEY_VAULT_URI, secret_name)
+        return mssparkutils.credentials.getSecret(KEY_VAULT_CONNECTION, secret_name)
     except Exception as exc:
         print(f"[WARN] Could not retrieve secret '{secret_name}' from Key Vault: {exc}")
     return ""

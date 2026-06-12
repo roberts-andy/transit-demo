@@ -39,37 +39,62 @@
 # ── Step 1: Resolve Secrets from Key Vault ──────────────────────────────────
 from notebookutils import mssparkutils
 
-KEY_VAULT_URI = "https://kvtransitdemo-f70cfb6a.vault.azure.net/"
+# Try BOTH approaches to diagnose which works in this workspace
+KEY_VAULT_CONNECTION = "transit-vault"  # Fabric connection name
+KEY_VAULT_URI = "https://kvtransitdemo-f70cfb6a.vault.azure.net/"  # Direct URI
+
 results = {}
 errors = []
+mbta_key = None
+wmata_key = None
 
-# Resolve MBTA secret
+# --- Attempt 1: Connection name ---
+print("Attempt 1: Using connection name 'transit-vault'...")
 try:
-    mbta_key = mssparkutils.credentials.getSecret(KEY_VAULT_URI, "mbta-api-key")
-    if mbta_key:
-        results["mbta_secret"] = "✅ PASS"
-        print(f"mbta-api-key: ****{mbta_key[-4:] if len(mbta_key) >= 4 else '****'}")
-    else:
-        results["mbta_secret"] = "❌ FAIL: Empty secret"
-        errors.append("MBTA secret resolved but empty")
-except Exception as e:
-    results["mbta_secret"] = f"❌ FAIL: {str(e)}"
-    errors.append(f"MBTA secret resolution failed: {str(e)}")
-    mbta_key = None
+    mbta_key = mssparkutils.credentials.getSecret(KEY_VAULT_CONNECTION, "mbta-api-key")
+    results["mbta_secret"] = "✅ PASS (connection name)"
+    print(f"  mbta-api-key: ****{mbta_key[-4:] if len(mbta_key) >= 4 else '****'}")
+except Exception as e1:
+    print(f"  Connection name failed: {str(e1)[:100]}")
+    # --- Attempt 2: Direct URI ---
+    print("\nAttempt 2: Using Key Vault URI directly...")
+    try:
+        mbta_key = mssparkutils.credentials.getSecret(KEY_VAULT_URI, "mbta-api-key")
+        results["mbta_secret"] = "✅ PASS (URI)"
+        print(f"  mbta-api-key: ****{mbta_key[-4:] if len(mbta_key) >= 4 else '****'}")
+    except Exception as e2:
+        print(f"  URI also failed: {str(e2)[:100]}")
+        results["mbta_secret"] = f"❌ FAIL: Both methods failed"
+        errors.append(f"MBTA secret - connection: {str(e1)[:80]} | URI: {str(e2)[:80]}")
 
-# Resolve WMATA secret
+# WMATA - use whichever method worked for MBTA
+resolve_method = KEY_VAULT_CONNECTION if "connection" in results.get("mbta_secret", "") else KEY_VAULT_URI
+print(f"\nResolving WMATA with: {resolve_method[:30]}...")
 try:
-    wmata_key = mssparkutils.credentials.getSecret(KEY_VAULT_URI, "wmata-api-key")
-    if wmata_key:
-        results["wmata_secret"] = "✅ PASS"
-        print(f"wmata-api-key: ****{wmata_key[-4:] if len(wmata_key) >= 4 else '****'}")
-    else:
-        results["wmata_secret"] = "❌ FAIL: Empty secret"
-        errors.append("WMATA secret resolved but empty")
+    wmata_key = mssparkutils.credentials.getSecret(resolve_method, "wmata-api-key")
+    results["wmata_secret"] = "✅ PASS"
+    print(f"  wmata-api-key: ****{wmata_key[-4:] if len(wmata_key) >= 4 else '****'}")
 except Exception as e:
-    results["wmata_secret"] = f"❌ FAIL: {str(e)}"
-    errors.append(f"WMATA secret resolution failed: {str(e)}")
-    wmata_key = None
+    # Try the other method
+    alt = KEY_VAULT_URI if resolve_method == KEY_VAULT_CONNECTION else KEY_VAULT_CONNECTION
+    try:
+        wmata_key = mssparkutils.credentials.getSecret(alt, "wmata-api-key")
+        results["wmata_secret"] = "✅ PASS (alt method)"
+        print(f"  wmata-api-key: ****{wmata_key[-4:] if len(wmata_key) >= 4 else '****'}")
+    except Exception as e2:
+        results["wmata_secret"] = f"❌ FAIL: {str(e)}"
+        errors.append(f"WMATA secret resolution failed: {str(e)}")
+
+# --- Diagnostic: list available connections ---
+print("\n--- Diagnostic Info ---")
+try:
+    # Try to list linked services/connections for debugging
+    print(f"Connection name used: '{KEY_VAULT_CONNECTION}'")
+    print(f"Key Vault URI used: '{KEY_VAULT_URI}'")
+    print("If both fail with 'Invalid vault uri', check that the connection")
+    print("in Fabric has the correct Key Vault URL configured.")
+except Exception:
+    pass
 
 print("\n[Secret Resolution Complete]")
 

@@ -19,6 +19,7 @@
 | Transformation Engineer | Transformations | .squad/squads/transitdemo/agents/transform/charter.md | Active |
 | SQL / Warehouse Engineer | Warehouse | .squad/squads/transitdemo/agents/warehouse/charter.md | Active |
 | DemoOps / QA Engineer | Demo Reliability and QA | .squad/squads/transitdemo/agents/qa-demoops/charter.md | Active |
+| Azure Infra Lead | Azure Infrastructure | .squad/squads/transitdemo/agents/azure-infra/charter.md | Active |
 | Scribe | Session Logger | .squad/squads/transitdemo/agents/scribe/charter.md | Active |
 | Ralph | Work Monitor | .squad/agents/ralph/charter.md | Active |
 

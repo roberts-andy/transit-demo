@@ -24,5 +24,11 @@
 ## Route work to DemoOps / QA Engineer when
 - the request concerns runbooks, smoke tests, CI/CD, Git integration, environment variables, observability, and demo reliability
 
+## Route work to Azure Infra Lead when
+- the request concerns Azure resource group, Key Vault, RBAC/access policy, managed identity permissions, and infrastructure configuration handoff
+- the request concerns secret onboarding and secret-reader assignment for Fabric workspace identities
+
+**Constraints:** Azure Infra Lead ALWAYS operates in subscription `f70cfb6a-3eda-4cd9-856c-eaf4f040a66e` and resource group `rg-transit-demo-kv`. EVERY resource operation must include post-operation verification (az group exists, az keyvault show, az keyvault secret show, az role assignment list). Report verification results explicitly. No retries without Lead approval.
+
 ## Route work to Scribe when
 - the request concerns docs, decision logs, architecture notes, talk track support, storytelling, or task tracking

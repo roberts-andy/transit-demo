@@ -39,13 +39,13 @@
 # ── Step 1: Resolve Secrets from Key Vault ──────────────────────────────────
 from notebookutils import mssparkutils
 
-KEY_VAULT_CONNECTION = "transit-vault"
+KEY_VAULT_URI = "https://kvtransitdemo-f70cfb6a.vault.azure.net/"
 results = {}
 errors = []
 
 # Resolve MBTA secret
 try:
-    mbta_key = mssparkutils.credentials.getSecret(KEY_VAULT_CONNECTION, "mbta-api-key")
+    mbta_key = mssparkutils.credentials.getSecret(KEY_VAULT_URI, "mbta-api-key")
     if mbta_key:
         results["mbta_secret"] = "✅ PASS"
         print(f"mbta-api-key: ****{mbta_key[-4:] if len(mbta_key) >= 4 else '****'}")
@@ -59,7 +59,7 @@ except Exception as e:
 
 # Resolve WMATA secret
 try:
-    wmata_key = mssparkutils.credentials.getSecret(KEY_VAULT_CONNECTION, "wmata-api-key")
+    wmata_key = mssparkutils.credentials.getSecret(KEY_VAULT_URI, "wmata-api-key")
     if wmata_key:
         results["wmata_secret"] = "✅ PASS"
         print(f"wmata-api-key: ****{wmata_key[-4:] if len(wmata_key) >= 4 else '****'}")

@@ -20,4 +20,5 @@ Design and implement a reusable Microsoft Fabric demo that proves multiple inges
 | Transformation Engineer | owns Dataflow Gen2 and normalization patterns | Active |
 | SQL / Warehouse Engineer | owns MLV and Warehouse gold model | Active |
 | DemoOps / QA Engineer | owns validation, CI/CD readiness, and demo script hardening | Active |
+| Azure Infra Lead | owns Azure resource provisioning, access policies, and shared infra configuration handoff | Active |
 | Scribe | owns decisions, backlog hygiene, and documentation quality | Active |

@@ -168,3 +168,28 @@ The skeleton includes baseline retry and run-log variables for observability.
 - **Readiness**: Notebooks integrated with resolve_secret and mssparkutils.credentials.getSecret. Secret names standardized.
 - **Blockers**: AZURE_KEY_VAULT_URI is empty/placeholder in parameters.dev.yml and .env.template.
 
+## EX-5 Assignment and Execution Note - 2026-06-11 14:18:00
+- **Owner Added**: Azure Infra Lead added to squad for Azure provisioning and configuration handoff.
+- **Task Scope**: Create RG for Key Vault hosting, create Key Vault, grant Fabric workspace identity secret-reader access, and store MBTA/WMATA/Ticketmaster secrets.
+- **Execution Context**: Azure CLI confirmed on subscription f70cfb6a-3eda-4cd9-856c-eaf4f040a66e and tenant da78621e-f352-46cd-b186-fad7b71bb6cf.
+- **Provisioned**:
+  - Resource group: rg-transit-demo-kv
+  - Key Vault: kvtransitdemo-f70cfb6a
+  - Key Vault URI: https://kvtransitdemo-f70cfb6a.vault.azure.net/
+- **Secrets Loaded**: mbta-api-key, wmata-api-key, ticketmaster-api-key
+- **Blocker**: Fabric workspace identity principal not enabled/resolvable for workspace 1771407e-fabc-4774-83fd-572e6347792c; KV reader role assignment is pending identity enablement.
+- **Next Command**: az rest --method post --url "https://api.fabric.microsoft.com/v1/workspaces/1771407e-fabc-4774-83fd-572e6347792c/identity"
+
+## 2026-06-11: EX-3 orchestration hardening in progress
+
+- Decision: keep MBTA then WMATA dependency chain unchanged while adding explicit failure-handling branches.
+- Evidence: `pl_orchestrate_bronze.json` now logs failed activity names through `last_failed_activity` and appends failure entries to `run_log`.
+- Evidence: retry and timeout policies confirmed on all notebook activities; pipeline logging/failure activities now include policy values.
+- Evidence: disabled schedule trigger placeholder (`trigger_placeholder`) added for deployment-time wiring.
+
+## 2026-06-11: EX-2 closure command recorded (no URI invention)
+
+- Decision: keep `key_vault_uri` empty until environment-specific value is retrieved.
+- Required next command: `az keyvault show --name <key-vault-name> --query properties.vaultUri -o tsv`
+- Required data from operator: target Key Vault name and subscription context.
+

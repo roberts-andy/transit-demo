@@ -51,6 +51,30 @@
   - `WMATA_API_KEY_SECRET_NAME` (default: `wmata-api-key`)
 - Do not store API keys in repository files.
 
+### EX-2 and EX-5 provisioning update (2026-06-11)
+
+- Azure context confirmed:
+  - Subscription: `f70cfb6a-3eda-4cd9-856c-eaf4f040a66e`
+  - Tenant: `da78621e-f352-46cd-b186-fad7b71bb6cf`
+- Provisioned resources:
+  - Resource group: `rg-transit-demo-kv`
+  - Key Vault: `kvtransitdemo-f70cfb6a`
+  - Key Vault URI: `https://kvtransitdemo-f70cfb6a.vault.azure.net/`
+- Secrets loaded into Key Vault:
+  - `mbta-api-key`
+  - `wmata-api-key`
+  - `ticketmaster-api-key`
+- `infra/parameters.dev.yml` updated with `key_vault_uri`.
+
+### Workspace identity role assignment (completed 2026-06-12)
+
+- Fabric workspace identity enabled for workspace `1771407e-fabc-4774-83fd-572e6347792c`.
+- Identity details:
+  - Service Principal ID: `a2e1a377-67a2-46e9-a0e4-20c69ea65bc4`
+  - Application ID: `c8b44f9e-4038-4c33-bd22-a01d72dbbb79`
+- Role assigned: **Key Vault Secrets User** on `kvtransitdemo-f70cfb6a`
+- Notebooks can now resolve secrets via `mssparkutils.credentials.getSecret()`.
+
 ## Bronze orchestration skeleton
 
 - Master pipeline scaffold: `src/ingestion/pipelines/pl_orchestrate_bronze.json`

@@ -74,3 +74,22 @@ esolve_secret and mssparkutils.credentials.getSecret. Secret names standardized 
 - Status: PASS (connectivity and key load validated).
 - Open gate: Fabric runtime write validation still required for EX-1 completion.
 
+## EX-3 Hardening Evidence - 2026-06-11
+- Updated `src/ingestion/pipelines/pl_orchestrate_bronze.json` with explicit OnFailure paths for each notebook activity.
+- Failure context capture added using `last_failed_activity` plus `run_log` append entries on failure.
+- Retry/timeout policy confirmed for notebook activities and added to pipeline log/failure activities.
+- Added disabled schedule trigger placeholder block (`trigger_placeholder`) marked for deployment wiring.
+
+## EX-2 Close-Prep Evidence - 2026-06-11
+- Added exact closure command to runbook and expected Key Vault URI and secret-name format notes in `infra/parameters.example.yml`.
+
+## EX-5 Azure Infra Lead Execution Evidence - 2026-06-11
+- Azure context pinned and verified:
+  - subscription: f70cfb6a-3eda-4cd9-856c-eaf4f040a66e
+  - tenant: da78621e-f352-46cd-b186-fad7b71bb6cf
+- Created resource group `rg-transit-demo-kv`.
+- Created Key Vault `kvtransitdemo-f70cfb6a`.
+- Set Key Vault secrets: `mbta-api-key`, `wmata-api-key`, `ticketmaster-api-key`.
+- Updated `infra/parameters.dev.yml` with `key_vault_uri=https://kvtransitdemo-f70cfb6a.vault.azure.net/`.
+- Role assignment pending: Fabric workspace identity principal was not resolvable yet for workspace `1771407e-fabc-4774-83fd-572e6347792c`.
+

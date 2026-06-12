@@ -9,6 +9,7 @@ How to decide who handles what.
 | {domain 1} | {Name} | {example tasks} |
 | {domain 2} | {Name} | {example tasks} |
 | {domain 3} | {Name} | {example tasks} |
+| Azure infrastructure provisioning and access control | Azure Infra Lead | Resource groups, Key Vault, RBAC/policies, secret bootstrapping, config handoff |
 | Code review | {Name} | Review PRs, check quality, suggest improvements |
 | Testing | {Name} | Write tests, find edge cases, verify fixes |
 | Scope & priorities | {Name} | What to build next, trade-offs, decisions |

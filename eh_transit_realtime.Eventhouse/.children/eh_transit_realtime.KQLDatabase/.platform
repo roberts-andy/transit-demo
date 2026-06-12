@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "KQLDatabase",
+    "displayName": "eh_transit_realtime",
+    "description": "eh_transit_realtime"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "27276419-09e7-807f-4a40-06adbe892135"
+  }
+}

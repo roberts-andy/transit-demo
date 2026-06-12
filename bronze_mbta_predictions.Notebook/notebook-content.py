@@ -124,4 +124,4 @@ df = spark.createDataFrame(records)
 
 # ── Bronze Acceptance Check ──────────────────────────────────────────────────
 row_count = spark.table(BRONZE_TABLE).count()
-print(f"[BRONZE ACCEPTED] Table: {BRONZE_TABLE} | Rows written this batch: {len(records)} | Total rows: {row_count}")
+print(f"[BRONZE ACCEPTED] Table: {BRONZE_TABLE} | Rows written this batch: {len(records)} | Total rows: {row_count}"

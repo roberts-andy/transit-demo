@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Eventhouse",
+    "displayName": "eh_transit_realtime"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "9d219777-f3a5-b0e9-4c5b-15f1daf2482a"
+  }
+}

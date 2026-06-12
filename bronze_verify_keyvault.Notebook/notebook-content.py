@@ -182,4 +182,4 @@ try:
     spark.sql(f"DROP TABLE IF EXISTS {TEST_TABLE}")
     print(f"Cleaned up test table: {TEST_TABLE}")
 except Exception as e:
-    print(f"Warning: Could not drop test table {TEST_TABLE}: {str(e)}")
+    print(f"Warning: Could not drop test table {TEST_TABLE}: {str(e)}"

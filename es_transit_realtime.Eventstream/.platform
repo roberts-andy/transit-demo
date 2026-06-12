@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Eventstream",
+    "displayName": "es_transit_realtime"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "9c752c5d-b3ad-9adc-486b-93d929e74f19"
+  }
+}

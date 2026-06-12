@@ -29,6 +29,10 @@ eventstream_name: "es_transit_realtime"
 # Use "cached" until live API keys are confirmed (CP-4)
 api_mode: "live"
 
+# Workspace identity (for Key Vault RBAC)
+workspace_identity_principal_id: "a2e1a377-67a2-46e9-a0e4-20c69ea65bc4"
+workspace_identity_app_id: "c8b44f9e-4038-4c33-bd22-a01d72dbbb79"
+
 # Key Vault runtime wiring (no secret values in repo)
 key_vault_uri: "https://kvtransitdemo-f70cfb6a.vault.azure.net/"
 key_vault_connection_name: "transit-vault"

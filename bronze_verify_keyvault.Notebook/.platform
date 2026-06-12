@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "bronze_verify_keyvault"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "e7576540-2aa9-40a9-b385-5c8493d50afd"
+  }
+}

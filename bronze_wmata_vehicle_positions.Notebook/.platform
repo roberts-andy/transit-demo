@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "bronze_wmata_vehicle_positions"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "cbd1cb88-6357-4831-ba09-78943db4d2f8"
+  }
+}

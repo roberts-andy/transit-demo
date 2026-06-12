@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "bronze_mbta_vehicles"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "06bdff74-bda2-47d7-8a64-a60a6746f43b"
+  }
+}
